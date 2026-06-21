@@ -23,6 +23,8 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class TaxonomyService {
 
+    private static final String ACTIVE = "Y";
+
     private final RegionRepository regionRepository;
     private final CategoryRepository categoryRepository;
     private final SubCategoryRepository subCategoryRepository;
@@ -32,8 +34,8 @@ public class TaxonomyService {
 
     @Cacheable("taxonomy")
     public TaxonomyResponse getTaxonomy() {
-        List<Region> regions = regionRepository.findAllByOrderBySortOrderAsc();
-        List<Category> categories = categoryRepository.findAllByOrderBySortOrderAsc();
+        List<Region> regions = regionRepository.findAllByUseYnOrderBySortOrderAsc(ACTIVE);
+        List<Category> categories = categoryRepository.findAllByUseYnOrderBySortOrderAsc(ACTIVE);
 
         List<TaxonomyResponse.RegionDto> regionDtos = regions.stream()
                 .map(TaxonomyResponse.RegionDto::from)
@@ -42,7 +44,7 @@ public class TaxonomyService {
         List<TaxonomyResponse.CategoryDto> categoryDtos = categories.stream()
                 .map(c -> {
                     List<SubCategory> subs = subCategoryRepository
-                            .findAllByCategoryCodeOrderBySortOrderAsc(c.getCategoryCode());
+                            .findAllByCategoryCodeAndUseYnOrderBySortOrderAsc(c.getCategoryCode(), ACTIVE);
                     return TaxonomyResponse.CategoryDto.from(c, subs);
                 })
                 .toList();
@@ -104,5 +106,35 @@ public class TaxonomyService {
                 .build());
 
         eventProducer.publishTaxonomyChanged("SUB_CATEGORY_ADDED", request.subCategoryCode());
+    }
+
+    // ─── 지역 비활성화 [ADMIN] ───────────────────────────────────────────────
+
+    @Transactional
+    @CacheEvict(value = "taxonomy", allEntries = true)
+    public void deactivateRegion(String regionCode) {
+        Region region = regionRepository.findByRegionCode(regionCode)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REGION_NOT_FOUND));
+
+        if (!region.isActive()) {
+            throw new BusinessException(ErrorCode.REGION_ALREADY_INACTIVE);
+        }
+        region.deactivate();
+        eventProducer.publishTaxonomyChanged("REGION_DEACTIVATED", regionCode);
+    }
+
+    // ─── 카테고리 비활성화 [ADMIN] ───────────────────────────────────────────
+
+    @Transactional
+    @CacheEvict(value = "taxonomy", allEntries = true)
+    public void deactivateCategory(String categoryCode) {
+        Category category = categoryRepository.findByCategoryCode(categoryCode)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        if (!category.isActive()) {
+            throw new BusinessException(ErrorCode.CATEGORY_ALREADY_INACTIVE);
+        }
+        category.deactivate();
+        eventProducer.publishTaxonomyChanged("CATEGORY_DEACTIVATED", categoryCode);
     }
 }

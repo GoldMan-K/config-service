@@ -1,5 +1,7 @@
 package com.config.taxonomy.controller;
 
+import com.config.global.exception.BusinessException;
+import com.config.global.exception.ErrorCode;
 import com.config.taxonomy.dto.*;
 import com.config.taxonomy.service.TaxonomyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,22 +29,62 @@ public class TaxonomyController {
 
     @Operation(summary = "[ADMIN] 지역 추가")
     @PostMapping("/regions")
-    public ResponseEntity<Void> createRegion(@RequestBody CreateRegionRequest request) {
+    public ResponseEntity<Void> createRegion(
+            @RequestHeader("X-Member-Id") Long memberId,
+            @RequestBody CreateRegionRequest request
+    ) {
+        validateMemberId(memberId);
         taxonomyService.createRegion(request);
         return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "[ADMIN] 카테고리 추가")
     @PostMapping("/categories")
-    public ResponseEntity<Void> createCategory(@RequestBody CreateCategoryRequest request) {
+    public ResponseEntity<Void> createCategory(
+            @RequestHeader("X-Member-Id") Long memberId,
+            @RequestBody CreateCategoryRequest request
+    ) {
+        validateMemberId(memberId);
         taxonomyService.createCategory(request);
         return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "[ADMIN] 서브카테고리 추가")
     @PostMapping("/sub-categories")
-    public ResponseEntity<Void> createSubCategory(@RequestBody CreateSubCategoryRequest request) {
+    public ResponseEntity<Void> createSubCategory(
+            @RequestHeader("X-Member-Id") Long memberId,
+            @RequestBody CreateSubCategoryRequest request
+    ) {
+        validateMemberId(memberId);
         taxonomyService.createSubCategory(request);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "[ADMIN] 지역 비활성화", description = "물리 삭제 대신 useYn=N으로 소프트삭제 처리합니다.")
+    @PatchMapping("/regions/{regionCode}")
+    public ResponseEntity<Void> deactivateRegion(
+            @RequestHeader("X-Member-Id") Long memberId,
+            @PathVariable String regionCode
+    ) {
+        validateMemberId(memberId);
+        taxonomyService.deactivateRegion(regionCode);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "[ADMIN] 카테고리 비활성화", description = "물리 삭제 대신 useYn=N으로 소프트삭제 처리합니다.")
+    @PatchMapping("/categories/{categoryCode}")
+    public ResponseEntity<Void> deactivateCategory(
+            @RequestHeader("X-Member-Id") Long memberId,
+            @PathVariable String categoryCode
+    ) {
+        validateMemberId(memberId);
+        taxonomyService.deactivateCategory(categoryCode);
+        return ResponseEntity.noContent().build();
+    }
+
+    private void validateMemberId(Long memberId) {
+        if (memberId == null || memberId <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
     }
 }

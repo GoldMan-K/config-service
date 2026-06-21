@@ -22,10 +22,12 @@ public enum ErrorCode {
     // 지역
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "지역을 찾을 수 없습니다."),
     REGION_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 지역 코드입니다."),
+    REGION_ALREADY_INACTIVE(HttpStatus.CONFLICT, "이미 비활성화된 지역입니다."),
 
     // 카테고리
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "카테고리를 찾을 수 없습니다."),
     CATEGORY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 카테고리 코드입니다."),
+    CATEGORY_ALREADY_INACTIVE(HttpStatus.CONFLICT, "이미 비활성화된 카테고리입니다."),
 
     // 서브카테고리
     SUB_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "서브카테고리를 찾을 수 없습니다."),
