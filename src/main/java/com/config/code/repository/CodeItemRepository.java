@@ -10,4 +10,6 @@ public interface CodeItemRepository extends JpaRepository<CodeItem, Long> {
     boolean existsByGroupIdAndCode(Long groupId, String code);
 
     List<CodeItem> findAllByGroupIdOrderBySortOrderAsc(Long groupId);
+
+    List<CodeItem> findAllByGroupIdAndUseYnOrderBySortOrderAsc(Long groupId, String useYn);
 }

@@ -44,6 +44,11 @@ public class CodeGroup {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void update(String groupName, String description) {
+        this.groupName = groupName;
+        this.description = description;
+    }
+
     public void deactivate() { this.useYn = "N"; }
     public void activate()   { this.useYn = "Y"; }
     public boolean isActive(){ return "Y".equals(this.useYn); }

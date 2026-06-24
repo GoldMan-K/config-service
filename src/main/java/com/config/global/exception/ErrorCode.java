@@ -14,6 +14,7 @@ public enum ErrorCode {
     // 코드 그룹
     CODE_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "코드 그룹을 찾을 수 없습니다."),
     CODE_GROUP_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 코드 그룹입니다."),
+    CODE_GROUP_ALREADY_INACTIVE(HttpStatus.CONFLICT, "이미 비활성화된 코드 그룹입니다."),
 
     // 코드 항목
     CODE_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "코드 항목을 찾을 수 없습니다."),
