@@ -29,7 +29,7 @@ public class CodeController {
         return ResponseEntity.ok(codeService.getCodeGroups());
     }
 
-    @Operation(summary = "코드 그룹별 항목 조회", description = "useYn=Y 항목만 반환합니다.")
+    @Operation(summary = "코드 그룹별 항목 조회", description = "useYn=Y 항목만 반환하며, 각 항목에는 수정용 id가 항상 포함됩니다.")
     @GetMapping("/{groupCode}")
     public ResponseEntity<List<CodeItemResponse>> getCodeItems(@PathVariable String groupCode) {
         return ResponseEntity.ok(codeService.getCodeItems(groupCode));
@@ -72,16 +72,47 @@ public class CodeController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "[ADMIN] 코드 항목 수정·비활성화", description = "useYn=N으로 설정 시 비활성화. 기존 데이터는 보존됩니다.")
+    @Operation(
+            summary = "[ADMIN] 코드 항목 수정·비활성화",
+            description = "물리 삭제는 지원하지 않으며 useYn=N으로 소프트삭제(비활성화) 처리합니다. 수정 후 최신 항목 전체를 반환합니다."
+    )
     @PatchMapping("/items/{id}")
-    public ResponseEntity<Void> updateCodeItem(
+    public ResponseEntity<CodeItemResponse> updateCodeItem(
             @RequestHeader("X-Member-Id") Long memberId,
             @PathVariable Long id,
             @RequestBody UpdateCodeItemRequest request
     ) {
         validateMemberId(memberId);
-        codeService.updateCodeItem(id, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(codeService.updateCodeItem(id, request));
+    }
+
+    @Operation(
+            summary = "[ADMIN] 코드 항목 수정·비활성화(groupCode + code)",
+            description = "id 기반 수정 API의 대체 키 버전입니다. 물리 삭제는 지원하지 않으며 useYn=N으로 소프트삭제 처리합니다."
+    )
+    @PatchMapping("/{groupCode}/items/{code}")
+    public ResponseEntity<CodeItemResponse> updateCodeItemByCode(
+            @RequestHeader("X-Member-Id") Long memberId,
+            @PathVariable String groupCode,
+            @PathVariable String code,
+            @RequestBody UpdateCodeItemRequest request
+    ) {
+        validateMemberId(memberId);
+        return ResponseEntity.ok(codeService.updateCodeItem(groupCode, code, request));
+    }
+
+    @Operation(
+            summary = "[ADMIN] 코드 항목 정렬 일괄 저장",
+            description = "운영 화면에서 여러 코드 항목의 sortOrder를 한 번에 저장합니다. payload는 code + sortOrder 배열입니다."
+    )
+    @PatchMapping("/{groupCode}/items/sort")
+    public ResponseEntity<List<CodeItemResponse>> updateCodeItemSortOrders(
+            @RequestHeader("X-Member-Id") Long memberId,
+            @PathVariable String groupCode,
+            @RequestBody List<UpdateCodeItemSortRequest> requests
+    ) {
+        validateMemberId(memberId);
+        return ResponseEntity.ok(codeService.updateCodeItemSortOrders(groupCode, requests));
     }
 
     private void validateMemberId(Long memberId) {

@@ -49,9 +49,27 @@ public class CodeItem {
     public void update(String name, int sortOrder) {
         this.name = name;
         this.sortOrder = sortOrder;
+        touch();
     }
 
-    public void deactivate() { this.useYn = "N"; }
-    public void activate()   { this.useYn = "Y"; }
+    public void changeSortOrder(int sortOrder) {
+        this.sortOrder = sortOrder;
+        touch();
+    }
+
+    public void deactivate() {
+        this.useYn = "N";
+        touch();
+    }
+
+    public void activate() {
+        this.useYn = "Y";
+        touch();
+    }
+
     public boolean isActive(){ return "Y".equals(this.useYn); }
+
+    private void touch() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

@@ -14,7 +14,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -108,13 +110,86 @@ public class CodeService {
 
     @Transactional
     @CacheEvict(value = "codeItems", allEntries = true)
-    public void updateCodeItem(Long id, UpdateCodeItemRequest request) {
+    public CodeItemResponse updateCodeItem(Long id, UpdateCodeItemRequest request) {
+        validateUseYn(request.useYn());
+
         CodeItem item = codeItemRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CODE_ITEM_NOT_FOUND));
-        item.update(request.name(), request.sortOrder());
-        if ("N".equals(request.useYn())) item.deactivate();
-        else item.activate();
+
+        applyItemUpdate(item, request);
+        codeItemRepository.flush();
 
         eventProducer.publishTaxonomyChanged("CODE_ITEM_UPDATED", String.valueOf(id));
+        return CodeItemResponse.from(item);
+    }
+
+    @Transactional
+    @CacheEvict(value = "codeItems", allEntries = true)
+    public CodeItemResponse updateCodeItem(String groupCode, String code, UpdateCodeItemRequest request) {
+        validateUseYn(request.useYn());
+
+        CodeGroup group = codeGroupRepository.findByGroupCode(groupCode)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CODE_GROUP_NOT_FOUND));
+
+        CodeItem item = codeItemRepository.findByGroupIdAndCode(group.getId(), code)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CODE_ITEM_NOT_FOUND));
+
+        applyItemUpdate(item, request);
+        codeItemRepository.flush();
+
+        eventProducer.publishTaxonomyChanged("CODE_ITEM_UPDATED", groupCode);
+        return CodeItemResponse.from(item);
+    }
+
+    @Transactional
+    @CacheEvict(value = "codeItems", allEntries = true)
+    public List<CodeItemResponse> updateCodeItemSortOrders(String groupCode, List<UpdateCodeItemSortRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        CodeGroup group = codeGroupRepository.findByGroupCode(groupCode)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CODE_GROUP_NOT_FOUND));
+
+        List<CodeItem> items = codeItemRepository.findAllByGroupIdOrderBySortOrderAsc(group.getId());
+        Set<String> requestCodes = new HashSet<>();
+
+        for (UpdateCodeItemSortRequest request : requests) {
+            if (request.code() == null || request.code().isBlank() || !requestCodes.add(request.code())) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT);
+            }
+
+            CodeItem item = items.stream()
+                    .filter(candidate -> request.code().equals(candidate.getCode()))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(ErrorCode.CODE_ITEM_NOT_FOUND));
+
+            item.changeSortOrder(request.sortOrder());
+        }
+
+        codeItemRepository.flush();
+
+        eventProducer.publishTaxonomyChanged("CODE_ITEM_UPDATED", groupCode);
+        return items.stream()
+                .sorted((left, right) -> Integer.compare(left.getSortOrder(), right.getSortOrder()))
+                .map(CodeItemResponse::from)
+                .toList();
+    }
+
+    private void applyItemUpdate(CodeItem item, UpdateCodeItemRequest request) {
+        item.update(request.name(), request.sortOrder());
+
+        if ("N".equals(request.useYn())) {
+            item.deactivate();
+            return;
+        }
+
+        item.activate();
+    }
+
+    private void validateUseYn(String useYn) {
+        if (!"Y".equals(useYn) && !"N".equals(useYn)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
     }
 }
